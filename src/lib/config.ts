@@ -4,8 +4,8 @@ export const APP_CONFIG = {
   IS_PRODUCTION: import.meta.env.PROD,
   IS_DEVELOPMENT: import.meta.env.DEV,
 
-  // 认证配置
-  ENABLE_AUTH: true,
+  // 认证配置 (生产环境临时禁用以测试)
+  ENABLE_AUTH: false,
 
   // 授权用户（您的邮箱）
   AUTHORIZED_USER_EMAIL: 'wangdong@51talk.com',
