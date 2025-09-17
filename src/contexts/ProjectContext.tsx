@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Project, Task, TaskStats } from '../types';
 import { useToast } from './ToastContext';
 import { db } from '../lib/database';
-import { useAuth } from './AuthContext';
 import { APP_CONFIG } from '../lib/config';
 
 interface ProjectContextType {
@@ -35,35 +34,21 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
   // 新增：引入认证状态
-  const { user, loading: authLoading } = useAuth();
+  // 无需认证，直接使用应用
   // 新增：避免重复加载
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  // 初始化数据（等待认证完成且满足条件时再加载）
+  // 初始化数据（简化版，无需认证）
   useEffect(() => {
-    // 认证尚未完成，先不加载
-    if (authLoading) return;
-
-    // 在启用认证且非开发模式下，未登录则不加载，避免弹出“未登录”错误
-    if (APP_CONFIG.ENABLE_AUTH && !APP_CONFIG.DEV_MODE && !user) return;
-
     if (!hasLoaded) {
       (async () => {
         await loadInitialData();
         setHasLoaded(true);
       })();
     }
-  }, [authLoading, user, hasLoaded]);
+  }, [hasLoaded]);
 
-  // 当用户登出时清空数据并允许下次登录后重新加载
-  useEffect(() => {
-    if (APP_CONFIG.ENABLE_AUTH && !APP_CONFIG.DEV_MODE && !authLoading && !user) {
-      setProjects([]);
-      setTasks([]);
-      setCurrentProject(null);
-      setHasLoaded(false);
-    }
-  }, [user, authLoading]);
+  // 删除了认证相关的逻辑
 
   const loadInitialData = async () => {
     try {
