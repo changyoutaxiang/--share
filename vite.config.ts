@@ -7,7 +7,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  base: '/--share/', // GitHub Pages 部署路径
+  // 根据部署环境动态设置base路径
+  base: process.env.VERCEL ? '/' : '/--share/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
