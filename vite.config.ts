@@ -7,4 +7,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  base: '/--share/', // GitHub Pages 部署路径
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false, // 生产环境不生成sourcemap
+  },
 });
