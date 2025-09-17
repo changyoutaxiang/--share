@@ -5,7 +5,7 @@
 
 // OpenRouter API配置
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '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';
 
 // 消息接口定义
 export interface ChatMessage {
