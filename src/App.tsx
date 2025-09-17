@@ -2,7 +2,6 @@ import React, { useState, Suspense } from 'react';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
 import { ResponsiveLayout } from './components/ResponsiveLayout';
@@ -11,9 +10,6 @@ import { useKeyboardShortcuts, createShortcut } from './hooks/useKeyboardShortcu
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { NotificationContainer } from './components/NotificationContainer';
-import { UserMenu } from './components/UserMenu';
-import { LoginPage } from './components/LoginPage';
-import { useAuth } from './contexts/AuthContext';
 import { APP_CONFIG } from './lib/config';
 import { ViewType } from './types';
 import { FolderOpen, BookOpen, Bot } from 'lucide-react';
@@ -30,7 +26,6 @@ function MainContent() {
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const { currentProject } = useProject();
-  const { user, loading, signOut } = useAuth();
 
   // 配置快捷键 - 必须在条件渲染之前调用
   const shortcuts = useKeyboardShortcuts([
@@ -44,47 +39,7 @@ function MainContent() {
     createShortcut('Escape', () => setShowShortcutsHelp(false), '关闭帮助面板'),
   ]);
 
-  // 认证状态检查（在 Hooks 调用之后）
-  if (APP_CONFIG.ENABLE_AUTH) {
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner />
-        </div>
-      );
-    }
-
-    // 开发模式下，检查是否有特殊的登出标识
-    if (APP_CONFIG.DEV_MODE) {
-      const forceLogin = localStorage.getItem('force_login') === 'true';
-      if (forceLogin || !user) {
-        return <LoginPage />;
-      }
-    } else {
-      // 生产模式的认证检查
-      if (!user) {
-        return <LoginPage />;
-      }
-
-      // 验证用户是否为授权用户
-      if (user.email !== APP_CONFIG.AUTHORIZED_USER_EMAIL) {
-        return (
-          <div className="min-h-screen flex items-center justify-center bg-red-50">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">访问被拒绝</h1>
-              <p className="text-gray-600 mb-4">此应用仅限授权用户访问</p>
-              <button
-                onClick={() => signOut()}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
-              >
-                返回登录
-              </button>
-            </div>
-          </div>
-        );
-      }
-    }
-  }
+  // 无需认证检查，直接渲染主界面
 
   const renderView = () => {
     return (
@@ -144,7 +99,9 @@ function MainContent() {
                 </>
               )}
             </div>
-            <UserMenu />
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {APP_CONFIG.APP_NAME} v{APP_CONFIG.APP_VERSION}
+            </div>
           </div>
         </header>
 
@@ -230,17 +187,15 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <ToastProvider>
-              <ProjectProvider>
-                <MainContent />
-                <ToastContainer />
-                <NotificationContainer />
-              </ProjectProvider>
-            </ToastProvider>
-          </NotificationProvider>
-        </AuthProvider>
+        <NotificationProvider>
+          <ToastProvider>
+            <ProjectProvider>
+              <MainContent />
+              <ToastContainer />
+              <NotificationContainer />
+            </ProjectProvider>
+          </ToastProvider>
+        </NotificationProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
