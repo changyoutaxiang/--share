@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Save, Star, Trash2, Tag, Calendar, Clock, Bookmark } from 'lucide-react';
+import { Save, Star, Trash2, Tag, Calendar, Clock, Bookmark, Zap, Loader2 } from 'lucide-react';
 import { Note, NoteCategory } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
+import { TitleGeneratorService } from '../lib/titleGeneratorService';
 
 interface NoteEditorProps {
   note: Note;
@@ -19,10 +20,19 @@ export function NoteEditor({ note, onSave, onDelete, onToggleFavorite }: NoteEdi
   const [lastSaved, setLastSaved] = useState<Date>(new Date(note.updated_at));
   const [isSaving, setIsSaving] = useState(false);
   const [currentNoteId, setCurrentNoteId] = useState(note.id);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [titleSuggestionDismissed, setTitleSuggestionDismissed] = useState(false);
 
   // 使用debounce实现自动保存
   const debouncedTitle = useDebounce(title, 1000);
   const debouncedContent = useDebounce(content, 1000);
+
+  // 检查是否应该显示标题生成建议
+  const shouldSuggestTitleGeneration =
+    content.length > 50 &&
+    TitleGeneratorService.shouldUpdateTitle(title, content) &&
+    !generatingTitle &&
+    !titleSuggestionDismissed;
 
   // 监听笔记变化，重置本地状态
   useEffect(() => {
@@ -34,6 +44,7 @@ export function NoteEditor({ note, onSave, onDelete, onToggleFavorite }: NoteEdi
       setTags(note.tags || []);
       setLastSaved(new Date(note.updated_at));
       setCurrentNoteId(note.id);
+      setTitleSuggestionDismissed(false); // 重置标题建议状态
     }
   }, [note, currentNoteId]);
 
@@ -126,6 +137,28 @@ export function NoteEditor({ note, onSave, onDelete, onToggleFavorite }: NoteEdi
   const handleDelete = () => {
     if (window.confirm('确定要删除这篇笔记吗？')) {
       onDelete(note.id);
+    }
+  };
+
+  // AI生成标题
+  const handleGenerateTitle = async () => {
+    if (!content.trim()) {
+      return;
+    }
+
+    try {
+      setGeneratingTitle(true);
+
+      const newTitle = await TitleGeneratorService.generateNoteTitle(content, category);
+      setTitle(newTitle);
+
+      // 立即保存新标题
+      await onSave(note.id, { title: newTitle });
+
+    } catch (error) {
+      console.error('生成标题失败:', error);
+    } finally {
+      setGeneratingTitle(false);
     }
   };
 
@@ -248,13 +281,72 @@ export function NoteEditor({ note, onSave, onDelete, onToggleFavorite }: NoteEdi
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* 标题编辑 */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="输入笔记标题..."
-            className="w-full text-xl font-semibold bg-transparent border-none outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500"
-          />
+          <div className="flex items-center space-x-3">
+            <input
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="输入笔记标题..."
+              className="flex-1 text-xl font-semibold bg-transparent border-none outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500"
+            />
+            <button
+              onClick={handleGenerateTitle}
+              disabled={generatingTitle || !content.trim() || content.length < 20}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/40 rounded-lg transition-colors border border-purple-200 dark:border-purple-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title={content.length < 20 ? "需要至少20个字符才能生成标题" : "AI智能生成标题"}
+            >
+              {generatingTitle ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>生成中</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={14} />
+                  <span>AI标题</span>
+                </>
+              )}
+            </button>
+          </div>
+          {/* 提示文本 */}
+          {content.length > 0 && content.length < 20 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+              💡 继续编写内容，达到20字符后可生成AI标题
+            </p>
+          )}
+
+          {/* 智能标题建议 */}
+          {shouldSuggestTitleGeneration && (
+            <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Zap size={14} className="text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                    建议使用AI生成标题
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleGenerateTitle}
+                    disabled={generatingTitle}
+                    className="text-xs bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {generatingTitle ? '生成中...' : '生成标题'}
+                  </button>
+                  <button
+                    onClick={() => setTitleSuggestionDismissed(true)}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    title="忽略建议"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                基于笔记内容智能生成简洁有意义的标题
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 标签管理 */}

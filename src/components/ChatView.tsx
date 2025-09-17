@@ -21,9 +21,10 @@ import {
   CreateConversationParams
 } from '../types';
 import { db } from '../lib/database';
-import { sendChatMessageStream, AVAILABLE_MODELS, generateConversationTitle } from '../lib/openrouter';
+import { sendChatMessageStream, AVAILABLE_MODELS } from '../lib/openrouter';
 import { APP_CONFIG } from '../lib/config';
 import { TemplateManager } from './TemplateManager';
+import { TitleGeneratorService } from '../lib/titleGeneratorService';
 
 export function ChatView() {
   // 状态管理
@@ -161,18 +162,11 @@ export function ChatView() {
       setInputMessage('');
       setSelectedTemplate(null);
 
-      // 如果是第一条消息，自动生成标题
-      if (messages.length === 0) {
-        try {
-          const title = await generateConversationTitle(messageContent);
-          await db.ai.updateConversation(selectedConversation.id, { title });
-          setConversations(prev => prev.map(c =>
-            c.id === selectedConversation.id ? { ...c, title } : c
-          ));
-        } catch (titleError) {
-          console.warn('生成标题失败:', titleError);
-        }
-      }
+      // 预备标题更新逻辑（将在AI回复完成后执行）
+      const shouldUpdateTitle = TitleGeneratorService.shouldUpdateTitle(
+        selectedConversation.title,
+        messageContent
+      );
 
       // 准备对话历史
       const allMessages = [...messages, userMessage];
@@ -203,6 +197,31 @@ export function ChatView() {
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingMessage('');
       setIsStreaming(false);
+
+      // AI回复完成后，自动更新对话标题
+      if (shouldUpdateTitle && fullResponse.trim()) {
+        try {
+          const newTitle = await TitleGeneratorService.generateConversationTitle(
+            messageContent,
+            fullResponse,
+            chatHistory
+          );
+
+          // 更新数据库中的标题
+          await db.ai.updateConversation(selectedConversation.id, { title: newTitle });
+
+          // 更新UI中的标题
+          setConversations(prev => prev.map(c =>
+            c.id === selectedConversation.id ? { ...c, title: newTitle } : c
+          ));
+
+          // 更新当前选中对话的标题
+          setSelectedConversation(prev => prev ? { ...prev, title: newTitle } : null);
+
+        } catch (titleError) {
+          console.warn('自动更新标题失败:', titleError);
+        }
+      }
 
     } catch (err: any) {
       console.error('发送消息失败:', err);
