@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "node",
+      "args": ["./node_modules/@supabase/mcp-server-postgrest/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://kogffetvzthxngohdmhl.supabase.co",
+        "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2ZmZXR2enRoeG5nb2hkbWhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NTcxNjcsImV4cCI6MjA3MzUzMzE2N30.5OGgyR7ALf11M4VANMWW1nB8PsZbC851UMmFJNNWYRE",
+        "SUPABASE_ACCESS_TOKEN": "sbp_30ac10c9e656c2cca5759bc75d4af19bba6d42bb",
+        "SUPABASE_PROJECT_REF": "kogffetvzthxngohdmhl"
+      }
+    }
+  }
+}
