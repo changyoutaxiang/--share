@@ -8,6 +8,11 @@ export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // 如果认证被禁用，不显示用户菜单
+  if (!APP_CONFIG.ENABLE_AUTH) {
+    return null;
+  }
+
   // 生产环境显示真实用户信息，开发环境显示授权用户信息
   const displayName = userProfile?.name || user?.email?.split('@')[0] || '用户';
   const displayEmail = userProfile?.email || user?.email || APP_CONFIG.AUTHORIZED_USER_EMAIL;
